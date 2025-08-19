@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VJ Application PRO X</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; overscroll-behavior: none; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a202c; }
+        ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #718096; }
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        input[type="color"] { -webkit-appearance: none; border: none; width: 100%; height: 40px; cursor: pointer; border-radius: 0.375rem; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 1px solid #4a5568; border-radius: 0.375rem; }
+        .tab-active { background-color: #4a5568; }
+        details > summary { list-style: none; cursor: pointer; }
+        details > summary::-webkit-details-marker { display: none; }
+        .details-icon { transition: transform 0.2s; }
+        details[open] .details-icon { transform: rotate(90deg); }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 flex flex-col h-screen overflow-hidden">
+
+    <!-- メインコンテナ -->
+    <div class="flex flex-col lg:flex-row flex-1 min-h-0">
+
+        <!-- 左パネル: Channel A -->
+        <div id="channel-a-container" class="w-full lg:w-1/4 bg-gray-800 p-2 flex-col lg:flex flex-1 min-h-0"></div>
+
+        <!-- 中央パネル: プレビュー & コントロール -->
+        <div id="main-controls-container" class="w-full lg:w-1/2 flex flex-col p-4 bg-gray-900 lg:order-2 flex-shrink-0">
+            <div class="w-full aspect-video relative bg-black rounded-lg overflow-hidden border-2 border-gray-700">
+                <canvas id="main-canvas" class="w-full h-full"></canvas>
+                <div class="absolute top-2 right-2 flex space-x-2">
+                    <div id="popout-btn" class="p-2 bg-gray-800/50 rounded-md cursor-pointer hover:bg-gray-700/70" title="アウトプットを別ウィンドウで開く">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </div>
+                    <div id="fullscreen-btn" class="p-2 bg-gray-800/50 rounded-md cursor-pointer hover:bg-gray-700/70" title="フルスクリーン">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-shrink-0 pt-4 space-y-4">
+                 <div class="bg-gray-800 p-4 rounded-lg lg:hidden">
+                    <div class="flex justify-around">
+                        <button id="mobile-edit-a" class="w-full mr-2 bg-cyan-600 hover:bg-cyan-700 px-4 py-3 rounded-md font-semibold">チャンネルAを編集</button>
+                        <button id="mobile-edit-b" class="w-full ml-2 bg-pink-600 hover:bg-pink-700 px-4 py-3 rounded-md font-semibold">チャンネルBを編集</button>
+                    </div>
+                </div>
+                <div class="bg-gray-800 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold mb-3 text-center">MASTER CONTROL</h3>
+                    <div class="flex items-center justify-center space-x-2 sm:space-x-4">
+                        <input type="number" id="bpm-input" value="120" class="w-20 sm:w-24 text-center bg-gray-700 border border-gray-600 rounded-md px-2 py-3 text-xl sm:text-2xl font-mono focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <button id="tap-btn" class="px-4 sm:px-6 py-3 bg-purple-600 rounded-lg text-lg sm:text-xl font-bold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-transform duration-75 active:scale-95">TAP</button>
+                        <button id="transition-btn" class="px-4 sm:px-6 py-3 bg-green-600 rounded-lg text-lg sm:text-xl font-bold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900">TRANS</button>
+                    </div>
+                     <p class="text-center text-gray-400 text-sm mt-2">"B"キーでTAP, "T"キーでTRANSITION</p>
+                </div>
+                <div class="bg-gray-800 p-4 rounded-lg">
+                     <h3 class="text-lg font-semibold mb-2 text-center">MIXER (A ⟷ B)</h3>
+                    <input type="range" id="mix-slider" min="0" max="1" step="0.01" value="0.5" class="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
+                </div>
+            </div>
+        </div>
+
+        <!-- 右パネル: Channel B -->
+        <div id="channel-b-container" class="w-full lg:w-1/4 bg-gray-800 p-2 flex-col lg:flex flex-1 min-h-0 lg:order-3"></div>
+    </div>
+    
+    <div id="media-elements" class="hidden"></div>
+    
+    <div id="mic-permission-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg p-8 text-center">
+            <h3 class="text-xl font-bold mb-4">マイクの使用許可が必要です</h3>
+            <p class="mb-6">サウンドビジュアライザー機能を使用するには、<br>ブラウザのマイクへのアクセスを許可してください。</p>
+            <button id="grant-mic-permission" class="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-md font-semibold">許可する</button>
+        </div>
+    </div>
+
+    <script>
+        // --- HTMLテンプレート ---
+        const layerTemplates = {
+            media: (id, channel) => `<div class="bg-gray-700 rounded-lg" id="layer-${id}"><details class="p-2"><summary class="flex items-center justify-between"><div class="flex items-center space-x-2"><svg class="details-icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg><span class="font-semibold layer-name">メディアレイヤー</span></div><button class="remove-layer-btn text-red-400 hover:text-red-600 text-xs font-bold" data-id="${id}">削除</button></summary><div class="mt-4 space-y-4 px-2"><input type="file" accept="video/*,image/*" class="layer-input block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-600 file:text-white hover:file:bg-gray-500" data-prop="source"><div><label class="text-sm">Opacity</label><input type="range" class="layer-input w-full" data-prop="opacity" min="0" max="1" step="0.01" value="1"></div><div><label class="text-sm">Effect</label><select class="layer-input w-full bg-gray-600 rounded p-1" data-prop="effect">
+                <option value="none">なし</option><option value="invert(1)">色反転</option><option value="grayscale(1)">グレースケール</option><option value="sepia(1)">セピア</option><option value="brightness(1.5)">明るく</option><option value="contrast(2)">コントラスト</option>
+                <option value="saturate(3)">高彩度</option><option value="hue-rotate(90deg)">色相回転</option><option value="blur(4px)">ぼかし</option><option value="brightness(0.7) contrast(1.5)">ハードライト</option><option value="grayscale(1) contrast(3)">フィルムノワール</option><option value="sepia(1) saturate(2)">ヴィンテージ</option>
+            </select></div><div><label class="text-sm">Color Tint</label><input type="color" class="layer-input w-full" data-prop="color" value="#ffffff"><label class="text-xs">Intensity</label><input type="range" class="layer-input w-full" data-prop="colorIntensity" min="0" max="1" step="0.01" value="0"></div><div><label class="text-sm">Beat Animation</label><select class="layer-input w-full bg-gray-600 rounded p-1" data-prop="beatAnimation">
+                <option value="none">なし</option><option value="zoom">ズーム</option><option value="flash">フラッシュ</option><option value="shake">シェイク</option><option value="pulse">パルス</option><option value="rotate">回転</option><option value="slide">スライド</option><option value="color-jitter">色ずれ</option>
+                <option value="strobe">ストロボ</option><option value="v-shake">縦揺れ</option><option value="h-shake">横揺れ</option><option value="glitch">グリッチ</option>
+            </select></div></div></details></div>`,
+            visualizer: (id, channel) => `<div class="bg-gray-700 rounded-lg" id="layer-${id}"><details class="p-2" open><summary class="flex items-center justify-between"><div class="flex items-center space-x-2"><svg class="details-icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg><span class="font-semibold layer-name">サウンドビジュアライザー</span></div><button class="remove-layer-btn text-red-400 hover:text-red-600 text-xs font-bold" data-id="${id}">削除</button></summary><div class="mt-4 space-y-4 px-2"><div><label class="text-sm">Style</label><select class="layer-input w-full bg-gray-600 rounded p-1" data-prop="vizStyle">
+                <option value="bars">バー</option><option value="circle">サークル</option><option value="line">ライン</option><option value="waveform">波形</option><option value="dots">ドット</option><option value="radial">放射状</option><option value="nebula">ネビュラ</option><option value="rings">リング</option><option value="shockwave">衝撃波</option><option value="equalizer">イコライザー</option>
+            </select></div><div><label class="text-sm">Color</label><input type="color" class="layer-input w-full" data-prop="color" value="${channel === 'A' ? '#06b6d4' : '#ec4899'}"></div><div><label class="text-sm">Opacity</label><input type="range" class="layer-input w-full" data-prop="opacity" min="0" max="1" step="0.01" value="0.8"></div><div><label class="text-sm">Beat Animation</label><select class="layer-input w-full bg-gray-600 rounded p-1" data-prop="beatAnimation">
+                <option value="none">なし</option><option value="pulse">パルス</option><option value="shake">シェイク</option><option value="rotate">回転</option><option value="strobe">ストロボ</option><option value="glitch">グリッチ</option>
+            </select></div></div></details></div>`,
+            generator: (id, channel) => `<div class="bg-gray-700 rounded-lg" id="layer-${id}"><details class="p-2" open><summary class="flex items-center justify-between"><div class="flex items-center space-x-2"><svg class="details-icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg><span class="font-semibold layer-name">ジェネレーター</span></div><button class="remove-layer-btn text-red-400 hover:text-red-600 text-xs font-bold" data-id="${id}">削除</button></summary><div class="mt-4 space-y-4 px-2"><div><label class="text-sm">Pattern</label><select class="layer-input w-full bg-gray-600 rounded p-1" data-prop="pattern">
+                <option value="tunnel">トンネル</option><option value="cubes">キューブ</option><option value="grid">グリッド</option><option value="particles">パーティクル</option><option value="starfield">スターフィールド</option><option value="kaleido">カレイドスコープ</option><option value="noise">ノイズ</option><option value="plasma">プラズマ</option>
+                <option value="metaballs">メタボール</option><option value="lissajous">リサージュ</option><option value="dots-wave">ドットウェーブ</option><option value="matrix">コードレイン</option><option value="terrain">ワイヤーフレーム地形</option><option value="fractal-tree">フラクタルツリー</option><option value="voronoi">ボロノイ図</option><option value="ribbons">リボン</option>
+            </select></div><div class="pattern-controls"></div><div><label class="text-sm">Opacity</label><input type="range" class="layer-input w-full" data-prop="opacity" min="0" max="1" step="0.01" value="1"></div><div><label class="text-sm">Color</label><input type="color" class="layer-input w-full" data-prop="color" value="${channel === 'A' ? '#06b6d4' : '#ec4899'}"></div><div><label class="text-sm">Beat Animation</label><select class="layer-input w-full bg-gray-600 rounded p-1" data-prop="beatAnimation">
+                <option value="none">なし</option><option value="pulse">パルス</option><option value="shake">シェイク</option><option value="rotate">回転</option><option value="strobe">ストロボ</option><option value="glitch">グリッチ</option>
+            </select></div></div></details></div>`
+        };
+        
+        const patternControlsTemplate = {
+            tunnel: `<div><label class="text-sm">Speed</label><input type="range" class="layer-input w-full" data-prop="p_speed" min="1" max="10" step="0.1" value="5"></div>`,
+            cubes: `<div><label class="text-sm">Count</label><input type="range" class="layer-input w-full" data-prop="p_count" min="1" max="50" step="1" value="10"></div>`,
+            particles: `<div><label class="text-sm">Count</label><input type="range" class="layer-input w-full" data-prop="p_count" min="10" max="500" step="1" value="100"></div>`,
+            starfield: `<div><label class="text-sm">Speed</label><input type="range" class="layer-input w-full" data-prop="p_speed" min="0.1" max="5" step="0.1" value="1"></div>`,
+            metaballs: `<div><label class="text-sm">Blobs</label><input type="range" class="layer-input w-full" data-prop="p_count" min="2" max="10" step="1" value="4"></div>`,
+            terrain: `<div><label class="text-sm">Speed</label><input type="range" class="layer-input w-full" data-prop="p_speed" min="0.001" max="0.02" step="0.001" value="0.005"></div>`,
+            ribbons: `<div><label class="text-sm">Count</label><input type="range" class="layer-input w-full" data-prop="p_count" min="1" max="10" step="1" value="3"></div>`,
+        };
+
+        const channelContentTemplate = (channelId, color) => `
+            <div class="flex items-center justify-between p-2">
+                <h2 class="text-xl font-bold text-${color}-400">CHANNEL ${channelId}</h2>
+                <div class="flex space-x-1">
+                    <button class="add-media-layer-btn bg-${color}-600 hover:bg-${color}-700 px-2 py-1 rounded-md text-xs font-semibold" data-channel="${channelId}">メディア</button>
+                    <button class="add-viz-layer-btn bg-purple-600 hover:bg-purple-700 px-2 py-1 rounded-md text-xs font-semibold" data-channel="${channelId}">音声</button>
+                    <button class="add-gen-layer-btn bg-yellow-600 hover:bg-yellow-700 px-2 py-1 rounded-md text-xs font-semibold" data-channel="${channelId}">ジェネレーター</button>
+                </div>
+            </div>
+            <div id="channel-${channelId.toLowerCase()}-layers" class="flex-1 overflow-y-auto space-y-2 p-2"></div>
+            <div class="p-2 lg:hidden"><button class="mobile-back-btn w-full bg-gray-600 hover:bg-gray-500 p-3 rounded-md font-semibold">ミキサーへ戻る</button></div>
+        `;
+        
+        document.getElementById('channel-a-container').innerHTML = channelContentTemplate('A', 'cyan');
+        document.getElementById('channel-b-container').innerHTML = channelContentTemplate('B', 'pink');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const mainCanvas = document.getElementById('main-canvas'), mainCtx = mainCanvas.getContext('2d');
+            const mediaElementsContainer = document.getElementById('media-elements');
+            const micModal = document.getElementById('mic-permission-modal'), grantMicBtn = document.getElementById('grant-mic-permission');
+            const mainControlsContainer = document.getElementById('main-controls-container');
+            const channelAContainer = document.getElementById('channel-a-container'), channelBContainer = document.getElementById('channel-b-container');
+
+            const VIZ_BARS = 64;
+            const state = {
+                channels: { A: { layers: [], canvas: document.createElement('canvas') }, B: { layers: [], canvas: document.createElement('canvas') }},
+                bpm: 120, mix: 0.5, beat: false,
+                tap: { lastTime: 0, intervals: [], timeout: 2000 },
+                audio: { context: null, analyser: null, dataArray: null, timeDomainArray: null, processedData: new Uint8Array(VIZ_BARS), source: null },
+                transition: { active: false, duration: 500, start: 0, from: 0, to: 0 },
+                outputWindow: { win: null, ctx: null, canvas: null },
+                time: 0,
+                generatorBuffer: { canvas: document.createElement('canvas') }
+            };
+            state.channels.A.ctx = state.channels.A.canvas.getContext('2d');
+            state.channels.B.ctx = state.channels.B.canvas.getContext('2d');
+            state.generatorBuffer.ctx = state.generatorBuffer.canvas.getContext('2d');
+
+            function init() {
+                resizeCanvas();
+                setupEventListeners();
+                requestAnimationFrame(drawLoop);
+                updateMobileView('mixer');
+            }
+
+            function resizeCanvas() { 
+                const rect = mainCanvas.parentElement.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1; 
+                [mainCanvas, state.channels.A.canvas, state.channels.B.canvas, state.generatorBuffer.canvas].forEach(c => { 
+                    c.width = rect.width * dpr; 
+                    c.height = rect.height * dpr; 
+                });
+            }
+            async function initAudio() { 
+                if (state.audio.context) return true; 
+                try { 
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
+                    const context = new (window.AudioContext || window.webkitAudioContext)(); 
+                    const analyser = context.createAnalyser(); 
+                    analyser.fftSize = 1024;
+                    const source = context.createMediaStreamSource(stream); 
+                    source.connect(analyser); 
+                    state.audio = { ...state.audio, context, analyser, source, dataArray: new Uint8Array(analyser.frequencyBinCount), timeDomainArray: new Uint8Array(analyser.fftSize) }; 
+                    micModal.classList.add('hidden'); 
+                    return true; 
+                } catch (err) { 
+                    micModal.classList.add('hidden'); 
+                    return false; 
+                }
+            }
+            function openOutputWindow() { if (state.outputWindow.win && !state.outputWindow.win.closed) { state.outputWindow.win.focus(); return; } const win = window.open('', 'VJ Output', 'width=1280,height=720,menubar=no,toolbar=no,location=no,status=no'); win.document.body.style.margin = '0'; win.document.body.style.backgroundColor = 'black'; win.document.title = 'VJ Output'; const canvas = win.document.createElement('canvas'); win.document.body.appendChild(canvas); const resizeHandler = () => { const dpr = win.devicePixelRatio || 1; canvas.width = win.innerWidth * dpr; canvas.height = win.innerHeight * dpr; }; win.addEventListener('resize', resizeHandler); win.addEventListener('beforeunload', () => { state.outputWindow = { win: null, ctx: null, canvas: null }; }); state.outputWindow = { win, canvas, ctx: canvas.getContext('2d') }; resizeHandler(); }
+            function updateMobileView(view) { if (window.innerWidth >= 1024) return; mainControlsContainer.classList.toggle('hidden', view !== 'mixer'); channelAContainer.classList.toggle('hidden', view !== 'A'); channelBContainer.classList.toggle('hidden', view !== 'B'); }
+
+            function setupEventListeners() {
+                window.addEventListener('resize', resizeCanvas);
+                document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
+                document.getElementById('popout-btn').addEventListener('click', openOutputWindow);
+                document.getElementById('mix-slider').addEventListener('input', e => state.mix = parseFloat(e.target.value));
+                document.getElementById('bpm-input').addEventListener('change', e => { state.bpm = parseFloat(e.target.value) || 120; updatePlaybackRate(); });
+                document.getElementById('tap-btn').addEventListener('click', handleTap);
+                document.getElementById('transition-btn').addEventListener('click', triggerTransition);
+                document.body.addEventListener('keydown', handleKeyDown);
+                document.querySelectorAll('.add-media-layer-btn').forEach(b => b.addEventListener('click', e => addLayer(e.target.dataset.channel, 'media')));
+                document.querySelectorAll('.add-viz-layer-btn').forEach(b => b.addEventListener('click', e => addLayer(e.target.dataset.channel, 'visualizer')));
+                document.querySelectorAll('.add-gen-layer-btn').forEach(b => b.addEventListener('click', e => addLayer(e.target.dataset.channel, 'generator')));
+                document.getElementById('channel-a-container').addEventListener('click', handleLayerActions);
+                document.getElementById('channel-b-container').addEventListener('click', handleLayerActions);
+                document.getElementById('channel-a-container').addEventListener('input', handleLayerInput);
+                document.getElementById('channel-b-container').addEventListener('input', handleLayerInput);
+                document.getElementById('channel-a-container').addEventListener('change', handleLayerInput);
+                document.getElementById('channel-b-container').addEventListener('change', handleLayerInput);
+                document.getElementById('mobile-edit-a').addEventListener('click', () => updateMobileView('A'));
+                document.getElementById('mobile-edit-b').addEventListener('click', () => updateMobileView('B'));
+                document.querySelectorAll('.mobile-back-btn').forEach(b => b.addEventListener('click', () => updateMobileView('mixer')));
+                grantMicBtn.addEventListener('click', initAudio);
+            }
+
+            async function addLayer(channelId, type) {
+                if (type === 'visualizer' || type === 'generator') {
+                    const audioReady = await initAudio();
+                    if (!audioReady && (type === 'visualizer' || ['kaleido', 'nebula'].includes(type))) { micModal.classList.remove('hidden'); return; }
+                }
+                const id = Date.now().toString(36) + Math.random().toString(36).substr(2);
+                const newLayer = createLayerObject(id, type, channelId);
+                state.channels[channelId].layers.push(newLayer);
+                const layerHtml = layerTemplates[type](id, channelId);
+                const layerList = document.getElementById(`channel-${channelId.toLowerCase()}-layers`);
+                layerList.insertAdjacentHTML('beforeend', layerHtml);
+                if (type === 'generator') {
+                    updatePatternControls(layerList.lastElementChild, newLayer.pattern);
+                }
+            }
+            
+            function createLayerObject(id, type, channel) {
+                const base = { id, type, opacity: 1, beatAnimation: 'none', beatState: { zoom: 1, flash: 0, shakeX: 0, shakeY: 0, rotate: 0, slideX: 0, slideY: 0, hue: 0, glitch: 0 }};
+                if (type === 'media') return { ...base, source: null, mediaType: '', effect: 'none', color: '#ffffff', colorIntensity: 0 };
+                if (type === 'visualizer') return { ...base, vizStyle: 'bars', color: channel === 'A' ? '#06b6d4' : '#ec4899', opacity: 0.8, patternState: {} };
+                if (type === 'generator') return { ...base, pattern: 'tunnel', color: channel === 'A' ? '#06b6d4' : '#ec4899', patternState: {}, p_speed: 5, p_count: 10 };
+            }
+
+            function updatePatternControls(layerEl, pattern) {
+                const controlsContainer = layerEl.querySelector('.pattern-controls');
+                controlsContainer.innerHTML = patternControlsTemplate[pattern] || '';
+            }
+
+            function removeLayer(id) { for (const channelId of ['A', 'B']) { const layers = state.channels[channelId].layers; const index = layers.findIndex(l => l.id === id); if (index > -1) { const layer = layers[index]; if (layer.type === 'media' && layer.source) document.getElementById(layer.source.id)?.remove(); layers.splice(index, 1); document.getElementById(`layer-${id}`)?.remove(); break; }}}
+            function findLayer(id) { return state.channels.A.layers.find(l => l.id === id) || state.channels.B.layers.find(l => l.id === id); }
+            
+            function handleLayerActions(e) {
+                if (e.target.classList.contains('remove-layer-btn')) removeLayer(e.target.dataset.id);
+            }
+            
+            function handleLayerInput(e) {
+                const target = e.target;
+                if (!target.classList.contains('layer-input')) return;
+                const layerEl = target.closest('[id^="layer-"]');
+                if (!layerEl) return;
+                const id = layerEl.id.replace('layer-', '');
+                const prop = target.dataset.prop;
+                const layer = findLayer(id);
+                if (!layer) return;
+
+                if (prop === 'source') { handleMediaSource(target.files[0], layer, layerEl); }
+                else if (prop.startsWith('p_')) { layer[prop] = parseFloat(target.value); }
+                else { layer[prop] = (target.type === 'range') ? parseFloat(target.value) : target.value; }
+
+                if (prop === 'pattern' || prop === 'vizStyle') {
+                    layer.patternState = {};
+                    if (prop === 'pattern') updatePatternControls(layerEl, layer.pattern);
+                }
+            }
+            
+            function handleMediaSource(file, layer, layerEl) {
+                if (!file) return;
+                const url = URL.createObjectURL(file);
+                const mediaId = `media-${layer.id}`;
+                let mediaEl = document.getElementById(mediaId);
+                
+                if (file.type.startsWith('video/')) {
+                    if (!mediaEl || mediaEl.tagName !== 'VIDEO') {
+                        mediaEl?.remove();
+                        mediaEl = document.createElement('video');
+                        mediaEl.loop = mediaEl.muted = mediaEl.playsInline = true;
+                        mediaElementsContainer.appendChild(mediaEl);
+                    }
+                    mediaEl.id = mediaId;
+                    mediaEl.src = url;
+                    mediaEl.play().catch(e => console.warn("Video play failed initially:", e));
+                    layer.mediaType = 'video';
+                    layer.source = mediaEl;
+                    updatePlaybackRate();
+                } else if (file.type.startsWith('image/')) {
+                    if (!mediaEl || mediaEl.tagName !== 'IMG') {
+                        mediaEl?.remove();
+                        mediaEl = document.createElement('img');
+                        mediaElementsContainer.appendChild(mediaEl);
+                    }
+                    mediaEl.id = mediaId;
+                    mediaEl.src = url;
+                    layer.mediaType = 'image';
+                    layer.source = mediaEl;
+                }
+                layerEl.querySelector('.layer-name').textContent = file.name.substring(0, 20);
+            }
+            
+            function getProcessedFrequencyData(rawData, numBars) {
+                if (!rawData || !state.audio.context) return new Uint8Array(numBars);
+                const processedData = new Uint8Array(numBars);
+                const fftSize = state.audio.analyser.fftSize;
+                const sampleRate = state.audio.context.sampleRate;
+                const frequencyBinCount = rawData.length;
+                const LOW_BARS = 12, MID_BARS = 40, HIGH_BARS = 12;
+                const LOW_FREQ_END = 250, MID_FREQ_END = 4000;
+                const binForFreq = (freq) => Math.floor(freq * fftSize / sampleRate);
+                const lowEndBin = binForFreq(LOW_FREQ_END);
+                const midEndBin = binForFreq(MID_FREQ_END);
+                let currentBar = 0, lastBin = 0;
+
+                for (let i = 0; i < LOW_BARS; i++) {
+                    const endBin = Math.floor(((i + 1) / LOW_BARS) * lowEndBin);
+                    let sum = 0, binCount = endBin - lastBin;
+                    if (binCount > 0) { for (let j = lastBin; j < endBin; j++) { sum += rawData[j]; } processedData[currentBar] = sum / binCount; } 
+                    else { processedData[currentBar] = lastBin < rawData.length ? rawData[lastBin] : 0; }
+                    lastBin = endBin; currentBar++;
+                }
+
+                const midStartBin = lastBin, midBinRange = midEndBin - midStartBin;
+                for (let i = 0; i < MID_BARS; i++) {
+                    const endBin = midStartBin + Math.floor(Math.pow((i + 1) / MID_BARS, 1.5) * midBinRange);
+                    let sum = 0, binCount = endBin - lastBin;
+                    if (binCount > 0) { for (let j = lastBin; j < endBin; j++) { sum += rawData[j]; } processedData[currentBar] = sum / binCount; } 
+                    else { processedData[currentBar] = lastBin < rawData.length ? rawData[lastBin] : 0; }
+                    lastBin = endBin; currentBar++;
+                }
+
+                const highStartBin = lastBin, highBinRange = frequencyBinCount - highStartBin;
+                for (let i = 0; i < HIGH_BARS; i++) {
+                    const endBin = highStartBin + Math.floor(Math.pow((i + 1) / HIGH_BARS, 2) * highBinRange);
+                    let sum = 0, binCount = endBin - lastBin;
+                    if (binCount > 0) { for (let j = lastBin; j < endBin; j++) { sum += rawData[j]; } processedData[currentBar] = sum / binCount; } 
+                    else { processedData[currentBar] = lastBin < rawData.length ? rawData[lastBin] : 0; }
+                    lastBin = endBin; currentBar++;
+                }
+                return processedData;
+            }
+
+            function drawLoop(timestamp) {
+                state.time = timestamp;
+                if (state.audio.analyser) {
+                    state.audio.analyser.getByteFrequencyData(state.audio.dataArray);
+                    state.audio.analyser.getByteTimeDomainData(state.audio.timeDomainArray);
+                    state.audio.processedData = getProcessedFrequencyData(state.audio.dataArray, VIZ_BARS);
+                }
+                if (state.transition.active) updateTransition(timestamp);
+                drawChannel('A');
+                drawChannel('B');
+                mixChannels();
+                state.beat = false;
+                requestAnimationFrame(drawLoop);
+            }
+
+            function drawChannel(channelId) {
+                const { canvas, ctx, layers } = state.channels[channelId];
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                layers.forEach(layer => {
+                    ctx.save();
+                    ctx.globalAlpha = layer.opacity;
+                    updateAndApplyBeatTransforms(layer, canvas, ctx);
+                    let filterString = layer.effect || 'none';
+                    if (layer.beatAnimation === 'color-jitter' && Math.abs(layer.beatState.hue) > 1) filterString += ` hue-rotate(${layer.beatState.hue}deg)`;
+                    ctx.filter = filterString;
+                    
+                    if (layer.type === 'media' && layer.source) drawMediaLayer(layer, ctx, canvas);
+                    else if (layer.type === 'visualizer') drawVisualizerLayer(layer, ctx, canvas);
+                    else if (layer.type === 'generator') drawGeneratorLayer(layer, ctx, canvas);
+
+                    ctx.restore();
+                    ctx.save();
+                    if (layer.colorIntensity > 0) {
+                        ctx.globalCompositeOperation = 'multiply';
+                        ctx.fillStyle = layer.color;
+                        ctx.globalAlpha = layer.colorIntensity;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    }
+                    if (layer.beatState.flash > 0.01) {
+                         ctx.globalAlpha = 1.0;
+                         ctx.globalCompositeOperation = 'source-over';
+                         ctx.fillStyle = `rgba(255, 255, 255, ${layer.beatState.flash})`;
+                         ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    }
+                    if (layer.beatState.strobe > 0) {
+                         ctx.globalAlpha = 1.0;
+                         ctx.globalCompositeOperation = 'source-over';
+                         ctx.fillStyle = `rgba(255, 255, 255, ${layer.beatState.strobe})`;
+                         ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    }
+                    if (layer.beatState.glitch > 0) {
+                        const h = Math.floor(Math.random() * 20 + 5);
+                        const y = Math.random() * (canvas.height - h);
+                        const x = (Math.random() - 0.5) * 100 * layer.beatState.glitch;
+                        ctx.drawImage(canvas, 0, y, canvas.width, h, x, y, canvas.width, h);
+                    }
+                    ctx.restore();
+                });
+            }
+            
+            function drawMediaLayer(layer, ctx, canvas) {
+                const media = layer.source;
+                const mediaWidth = (layer.mediaType === 'video') ? media.videoWidth : media.naturalWidth;
+                const mediaHeight = (layer.mediaType === 'video') ? media.videoHeight : media.naturalHeight;
+                if (!mediaWidth || !mediaHeight) return;
+                const canvasAspect = canvas.width / canvas.height;
+                const mediaAspect = mediaWidth / mediaHeight;
+                let dw, dh;
+                if (canvasAspect > mediaAspect) { dw = canvas.width; dh = dw / mediaAspect; } 
+                else { dh = canvas.height; dw = dh * mediaAspect; }
+                ctx.drawImage(media, -dw / 2, -dh / 2, dw, dh);
+            }
+
+            function drawVisualizerLayer(layer, ctx, canvas) {
+                if (!state.audio.processedData) return;
+                const data = state.audio.processedData, len = data.length;
+                const w = canvas.width, h = canvas.height;
+                const s = layer.patternState;
+                ctx.fillStyle = layer.color;
+                ctx.strokeStyle = layer.color;
+                
+                switch (layer.vizStyle) {
+                    case 'bars': case 'equalizer':
+                        const barWidth = w / len;
+                        for (let i = 0; i < len; i++) {
+                            const barHeight = (data[i] / 255) * h;
+                            if (layer.vizStyle === 'equalizer') {
+                                ctx.fillRect(i * barWidth - w / 2, h / 2 - barHeight, barWidth - 2, barHeight);
+                            } else {
+                                ctx.fillRect(i * barWidth - w / 2, h / 2 - barHeight, barWidth, barHeight);
+                            }
+                        }
+                        break;
+                    case 'circle':
+                        const radius = Math.min(w, h) * 0.3;
+                        for (let i = 0; i < len; i++) {
+                            const barHeight = (data[i] / 255) * radius * 1.5, angle = (i / len) * Math.PI * 2;
+                            ctx.save(); ctx.rotate(angle); ctx.fillRect(-2, radius, 4, barHeight); ctx.restore();
+                        }
+                        break;
+                    case 'line':
+                        ctx.lineWidth = 3; ctx.beginPath();
+                        ctx.moveTo(-w / 2, 0);
+                        for (let i = 0; i < len; i++) {
+                            const y = (data[i] / 255 - 0.5) * h * 0.8;
+                            ctx.lineTo((i / len) * w - w / 2, y);
+                        }
+                        ctx.stroke();
+                        break;
+                    case 'waveform':
+                        const timeData = state.audio.timeDomainArray;
+                        ctx.lineWidth = 2; ctx.beginPath();
+                        const sliceWidth = w * 1.0 / timeData.length;
+                        let x = -w/2;
+                        for (let i = 0; i < timeData.length; i++) {
+                            const v = timeData[i] / 128.0;
+                            const y = v * h / 2 - h/2;
+                            if (i === 0) { ctx.moveTo(x, y); } else { ctx.lineTo(x, y); }
+                            x += sliceWidth;
+                        }
+                        ctx.stroke();
+                        break;
+                    case 'dots':
+                        const gridSize = 32;
+                        for(let i = 0; i < gridSize; i++) {
+                            for(let j = 0; j < gridSize; j++) {
+                                const dataIndex = (i * j) % len;
+                                const size = (data[dataIndex] / 255) * (w / gridSize) * 0.8;
+                                const x = (i / gridSize) * w - w/2;
+                                const y = (j / gridSize) * h - h/2;
+                                ctx.beginPath();
+                                ctx.arc(x, y, size/2, 0, Math.PI*2);
+                                ctx.fill();
+                            }
+                        }
+                        break;
+                    case 'radial':
+                        for (let i = 0; i < len; i++) {
+                            const barHeight = (data[i] / 255) * h * 0.4;
+                            const angle = (i / len) * Math.PI * 2;
+                            ctx.save(); ctx.rotate(angle); ctx.fillRect(-2, 0, 4, barHeight); ctx.restore();
+                        }
+                        break;
+                    case 'nebula':
+                        if (!s.particles) { s.particles = Array.from({ length: 200 }, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0 })); }
+                        s.particles.forEach(p => {
+                            if (p.life <= 0) {
+                                p.x = (Math.random() - 0.5) * 50; p.y = (Math.random() - 0.5) * 50;
+                                const angle = Math.random() * Math.PI * 2;
+                                const speed = Math.random() * 4 + 1;
+                                p.vx = Math.cos(angle) * speed; p.vy = Math.sin(angle) * speed;
+                                p.life = 100;
+                            }
+                            const audioForce = data[Math.floor(p.life) % len] / 255;
+                            p.x += p.vx * audioForce; p.y += p.vy * audioForce;
+                            p.life--;
+                            ctx.globalAlpha = layer.opacity * (p.life / 100);
+                            ctx.fillRect(p.x, p.y, 2, 2);
+                        });
+                        break;
+                    case 'rings':
+                        if (!s.rings) s.rings = [];
+                        if (state.beat) s.rings.push({ r: 0, life: 1 });
+                        ctx.lineWidth = 3;
+                        s.rings.forEach((r, i) => {
+                            r.r += 5; r.life -= 0.02;
+                            if (r.life <= 0) s.rings.splice(i, 1);
+                            ctx.globalAlpha = layer.opacity * r.life;
+                            ctx.beginPath(); ctx.arc(0, 0, r.r, 0, Math.PI * 2); ctx.stroke();
+                        });
+                        break;
+                    case 'shockwave':
+                        if (state.beat) s.r = 0;
+                        if (typeof s.r !== 'undefined') {
+                            s.r += w * 0.02;
+                            if (s.r > w) s.r = undefined;
+                            else {
+                                ctx.lineWidth = 20 * (1 - s.r / w);
+                                ctx.globalAlpha = layer.opacity * (1 - s.r / w);
+                                ctx.beginPath(); ctx.arc(0, 0, s.r, 0, Math.PI * 2); ctx.stroke();
+                            }
+                        }
+                        break;
+                }
+            }
+            
+            function drawGeneratorLayer(layer, ctx, canvas) {
+                const w = canvas.width, h = canvas.height;
+                const s = layer.patternState;
+                const useBuffer = ['noise', 'plasma', 'metaballs', 'matrix'].includes(layer.pattern);
+                const drawCtx = useBuffer ? state.generatorBuffer.ctx : ctx;
+                
+                drawCtx.fillStyle = layer.color;
+                drawCtx.strokeStyle = layer.color;
+                if (useBuffer && layer.pattern !== 'matrix') drawCtx.clearRect(0, 0, w, h);
+
+                switch (layer.pattern) {
+                    case 'tunnel': s.z = s.z || 0; s.z = (s.z + layer.p_speed * 0.5) % 50; for (let i = 0; i < 20; i++) { const z = (s.z + i * 50) % (20 * 50); const scale = 1000 / (1000 + z); const size = 2000 * scale; ctx.globalAlpha = layer.opacity * (1 - z / (20 * 50)); ctx.strokeRect(-size / 2, -size / 2, size, size); } break;
+                    case 'cubes': if (!s.cubes || s.cubes.length !== layer.p_count) { s.cubes = Array.from({ length: layer.p_count }, () => ({ x: (Math.random()-0.5)*w, y: (Math.random()-0.5)*h, z: Math.random() * w, rotX: Math.random() * Math.PI * 2, rotY: Math.random() * Math.PI * 2 })); } s.cubes.forEach(c => { c.rotX += 0.01; c.rotY += 0.005; const points = [[-1,-1,-1], [1,-1,-1], [1,1,-1], [-1,1,-1], [-1,-1,1], [1,-1,1], [1,1,1], [-1,1,1]]; const projected = points.map(p => { let [x,y,z] = p; let rz = y * Math.cos(c.rotX) - z * Math.sin(c.rotX); y = y * Math.sin(c.rotX) + z * Math.cos(c.rotX); z = rz; let rx = x * Math.cos(c.rotY) - z * Math.sin(c.rotY); z = x * Math.sin(c.rotY) + z * Math.cos(c.rotY); x = rx; const scale = w / (w + z * 50 + c.z); return { x: c.x + x * 50 * scale, y: c.y + y * 50 * scale }; }); ctx.beginPath(); const edges = [0,1, 1,2, 2,3, 3,0, 4,5, 5,6, 6,7, 7,4, 0,4, 1,5, 2,6, 3,7]; for(let i = 0; i < edges.length; i += 2) { ctx.moveTo(projected[edges[i]].x, projected[edges[i]].y); ctx.lineTo(projected[edges[i+1]].x, projected[edges[i+1]].y); } ctx.stroke(); }); break;
+                    case 'grid': ctx.globalAlpha = layer.opacity * (state.beat ? 1 : 0.3); for (let i = -10; i <= 10; i++) { ctx.fillRect(i * w / 20, -h/2, 1, h); ctx.fillRect(-w/2, i * h / 20, w, 1); } break;
+                    case 'particles': if (!s.particles || s.particles.length !== layer.p_count) { s.particles = Array.from({ length: layer.p_count }, () => ({ x: (Math.random()-0.5)*w, y: (Math.random()-0.5)*h, vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2 })); } s.particles.forEach(p => { p.x += p.vx; p.y += p.vy; if (Math.abs(p.x) > w/2) p.vx *= -1; if (Math.abs(p.y) > h/2) p.vy *= -1; ctx.fillRect(p.x, p.y, 2, 2); }); break;
+                    case 'starfield': if (!s.stars) { s.stars = Array.from({ length: 200 }, () => ({ x: (Math.random() - 0.5) * w, y: (Math.random() - 0.5) * h, z: Math.random() * w })); } s.stars.forEach(star => { star.z -= layer.p_speed; if (star.z <= 0) star.z = w; const k = 128 / star.z; const px = star.x * k, py = star.y * k; const size = (1 - star.z / w) * 5; ctx.fillRect(px, py, size, size); }); break;
+                    case 'kaleido': if (!state.audio.processedData) break; for (let i = 0; i < 6; i++) { ctx.rotate(Math.PI / 3); ctx.beginPath(); for(let j = 0; j < state.audio.processedData.length; j++) { const r = state.audio.processedData[j] * 2, a = (j / state.audio.processedData.length) * Math.PI; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.stroke(); } break;
+                    case 'noise': const imageData = drawCtx.createImageData(w, h), data = imageData.data; for (let i = 0; i < data.length; i += 4) { const val = Math.random() * 255; data[i] = data[i+1] = data[i+2] = val; data[i+3] = 255; } drawCtx.putImageData(imageData, 0, 0); break;
+                    case 'plasma': { const t = state.time * 0.001; const img = drawCtx.createImageData(w, h), d = img.data; for (let y = 0; y < h; y++) { for (let x = 0; x < w; x++) { const val = Math.sin(x/16 + t) + Math.sin(y/8 + t) + Math.sin((x+y)/16 + t) + Math.sin(Math.sqrt(x*x + y*y)/8 + t); const i = (y * w + x) * 4; d[i] = Math.sin(val * Math.PI) * 127 + 128; d[i+1] = Math.sin(val * Math.PI + 2 * Math.PI / 3) * 127 + 128; d[i+2] = Math.sin(val * Math.PI + 4 * Math.PI / 3) * 127 + 128; d[i+3] = 255; }} drawCtx.putImageData(img, 0, 0); break; }
+                    case 'metaballs':
+                        if (!s.blobs || s.blobs.length !== layer.p_count) { s.blobs = Array.from({length: layer.p_count}, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4, r: Math.random() * 50 + 20 })); }
+                        s.blobs.forEach(b => { b.x += b.vx; b.y += b.vy; if (b.x < 0 || b.x > w) b.vx *= -1; if (b.y < 0 || b.y > h) b.vy *= -1; });
+                        const m_img = drawCtx.createImageData(w, h), m_d = m_img.data;
+                        for (let y = 0; y < h; y++) { for (let x = 0; x < w; x++) {
+                            let sum = 0;
+                            s.blobs.forEach(b => { const dx = x - b.x, dy = y - b.y; sum += (b.r * b.r) / (dx * dx + dy * dy); });
+                            if (sum > 1) { const i = (y * w + x) * 4; m_d[i] = 255; m_d[i+1] = 255; m_d[i+2] = 255; m_d[i+3] = 255; }
+                        }}
+                        drawCtx.putImageData(m_img, 0, 0);
+                        break;
+                    case 'lissajous': { const t = state.time * 0.001; ctx.beginPath(); for(let i=0; i<1000; i++) { const a = i/100; ctx.lineTo(Math.sin(a*3+t)*w*0.4, Math.sin(a*2)*h*0.4); } ctx.stroke(); break; }
+                    case 'dots-wave': const audioSum = state.audio.processedData ? state.audio.processedData.reduce((a,b)=>a+b,0)/VIZ_BARS/255 : 0.5; const gridSize = 40; for(let i=0; i<gridSize; i++) { for(let j=0; j<gridSize; j++) { const x = (i/gridSize-0.5)*w; const y = (j/gridSize-0.5)*h; const wave = Math.sin(x*0.1 + state.time*0.002) * h * 0.1 * audioSum; ctx.fillRect(x, y+wave, 2, 2); }} break;
+                    case 'matrix':
+                        if (!s.drops) { s.drops = Array.from({length: 50}, () => ({x: Math.random()*w, y: Math.random()*h, speed: Math.random()*4+1})); }
+                        drawCtx.font = "16px monospace";
+                        drawCtx.fillStyle = "rgba(0,0,0,0.1)"; drawCtx.fillRect(0,0,w,h); drawCtx.fillStyle = layer.color;
+                        s.drops.forEach(d => { const char = String.fromCharCode(0x30A0 + Math.random() * 96); drawCtx.fillText(char, d.x, d.y); d.y += d.speed; if (d.y > h) d.y = 0; });
+                        break;
+                    case 'terrain':
+                        s.offset = (s.offset || 0) + layer.p_speed;
+                        const p = (x, y, t) => { const scale = 0.02; return (Math.sin(x * scale + t) + Math.cos(y * scale - t)) * 50; };
+                        ctx.beginPath();
+                        for (let y = -20; y < 20; y++) { for (let x = -20; x < 20; x++) {
+                            const z = p(x,y,s.offset); const scale = 500/(500+z);
+                            const px = x*30*scale, py = y*20*scale + z*scale;
+                            if (x > -20) { const pz = p(x-1,y,s.offset); const pscale = 500/(500+pz); ctx.moveTo(px,py); ctx.lineTo((x-1)*30*pscale, y*20*pscale + pz*pscale); }
+                            if (y > -20) { const pz = p(x,y-1,s.offset); const pscale = 500/(500+pz); ctx.moveTo(px,py); ctx.lineTo(x*30*pscale, (y-1)*20*pscale + pz*pscale); }
+                        }}
+                        ctx.stroke();
+                        break;
+                    case 'fractal-tree':
+                        const drawBranch = (x1, y1, angle, len) => { if (len < 2) return; const x2 = x1 + Math.cos(angle) * len, y2 = y1 + Math.sin(angle) * len; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); drawBranch(x2, y2, angle - 0.3, len * 0.7); drawBranch(x2, y2, angle + 0.3, len * 0.7); };
+                        drawBranch(0, h*0.4, -Math.PI/2, h*0.2);
+                        break;
+                    case 'voronoi':
+                        if (!s.points || state.beat) { s.points = Array.from({length: 20}, () => ({x: (Math.random()-0.5)*w, y: (Math.random()-0.5)*h, r: 0})); }
+                        s.points.forEach(p => { p.r += 5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.stroke(); });
+                        break;
+                    case 'ribbons':
+                        if (!s.ribbons) { s.ribbons = Array.from({length: layer.p_count}, () => ({phase: Math.random(), freq: Math.random()*0.02+0.01})); }
+                        s.ribbons.forEach(r => {
+                            ctx.beginPath(); ctx.moveTo(-w/2, 0);
+                            for(let x=-w/2; x<w/2; x++) { ctx.lineTo(x, Math.sin(x * r.freq + state.time*0.001 + r.phase) * h*0.2); }
+                            ctx.stroke();
+                        });
+                        break;
+                }
+                if (useBuffer) {
+                    ctx.drawImage(state.generatorBuffer.canvas, -w/2, -h/2, w, h);
+                }
+            }
+
+            function mixChannels() { mainCtx.globalCompositeOperation = 'source-over'; mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height); mainCtx.globalAlpha = 1.0 - state.mix; mainCtx.drawImage(state.channels.A.canvas, 0, 0, mainCanvas.width, mainCanvas.height); mainCtx.globalCompositeOperation = 'lighter'; mainCtx.globalAlpha = state.mix; mainCtx.drawImage(state.channels.B.canvas, 0, 0, mainCanvas.width, mainCanvas.height); mainCtx.globalAlpha = 1.0; mainCtx.globalCompositeOperation = 'source-over'; const { win, ctx: outCtx, canvas: outCanvas } = state.outputWindow; if (win && !win.closed && outCtx) { try { outCtx.clearRect(0, 0, outCanvas.width, outCanvas.height); outCtx.drawImage(mainCanvas, 0, 0, outCanvas.width, outCanvas.height); } catch (e) { console.error("ポップアップウィンドウへの描画に失敗しました:", e); state.outputWindow = { win: null, ctx: null, canvas: null }; }}}
+            function updateAndApplyBeatTransforms(layer, canvas, ctx) { const s = layer.beatState, anim = layer.beatAnimation; if (state.beat && anim !== 'none') { if (['zoom', 'pulse'].includes(anim)) s.zoom = anim === 'zoom' ? 1.2 : 1.3; if (anim === 'flash') s.flash = 0.8; if (anim === 'shake') { s.shakeX = (Math.random() - 0.5) * 50; s.shakeY = (Math.random() - 0.5) * 50; } if (anim === 'rotate') s.rotate = (Math.random() - 0.5) * 20; if (anim === 'slide') { s.slideX = (Math.random() - 0.5) * 60; s.slideY = (Math.random() - 0.5) * 60; } if (anim === 'color-jitter') s.hue = Math.random() * 90; if (anim === 'strobe') s.strobe = 1; if (anim === 'v-shake') s.shakeY = (Math.random() - 0.5) * 80; if (anim === 'h-shake') s.shakeX = (Math.random() - 0.5) * 80; if (anim === 'glitch') s.glitch = 1; } s.zoom = Math.max(1, s.zoom * 0.9); s.flash = Math.max(0, s.flash * 0.8); s.shakeX *= 0.8; s.shakeY *= 0.8; s.rotate *= 0.85; s.slideX *= 0.8; s.slideY *= 0.8; s.hue *= 0.7; s.strobe *= 0.5; s.glitch *= 0.5; ctx.translate(canvas.width / 2 + s.shakeX + s.slideX, canvas.height / 2 + s.shakeY + s.slideY); ctx.rotate(s.rotate * Math.PI / 180); ctx.scale(s.zoom, s.zoom); }
+            function handleTap() { const now = performance.now(); if (now - state.tap.lastTime > state.tap.timeout) state.tap.intervals = []; if (state.tap.lastTime > 0) { state.tap.intervals.push(now - state.tap.lastTime); if (state.tap.intervals.length > 8) state.tap.intervals.shift(); } state.tap.lastTime = now; if (state.tap.intervals.length > 1) { const avg = state.tap.intervals.reduce((a, b) => a + b, 0) / state.tap.intervals.length; state.bpm = 60000 / avg; document.getElementById('bpm-input').value = state.bpm.toFixed(2); updatePlaybackRate(); } state.beat = true; const btn = document.getElementById('tap-btn'); btn.classList.add('scale-110', 'bg-purple-500'); setTimeout(() => btn.classList.remove('scale-110', 'bg-purple-500'), 100); }
+            function updatePlaybackRate() { const rate = state.bpm / 120; for (const channelId of ['A', 'B']) { for (const layer of state.channels[channelId].layers) { if (layer.type === 'media' && layer.mediaType === 'video' && layer.source) { layer.source.playbackRate = rate; }}}}
+            function triggerTransition() { if (state.transition.active) return; state.transition = { active: true, start: performance.now(), from: state.mix, to: state.mix < 0.5 ? 1 : 0, duration: 500 }; }
+            function updateTransition(timestamp) { const elapsed = timestamp - state.transition.start; const progress = Math.min(elapsed / state.transition.duration, 1); const easedProgress = progress * (2 - progress); state.mix = state.transition.from + (state.transition.to - state.transition.from) * easedProgress; document.getElementById('mix-slider').value = state.mix; if (progress >= 1) state.transition.active = false; }
+            function handleKeyDown(e) { if (document.activeElement.tagName === 'INPUT') return; const key = e.key.toLowerCase(); if (key === 'b') { e.preventDefault(); handleTap(); } if (key === 't') { e.preventDefault(); triggerTransition(); } }
+            function toggleFullscreen() { const container = mainCanvas.parentElement; if (!document.fullscreenElement) container.requestFullscreen().catch(err => alert(`フルスクリーンエラー: ${err.message}`)); else document.exitFullscreen(); }
+
+            init();
+        });
+    </script>
+</body>
+</html>
